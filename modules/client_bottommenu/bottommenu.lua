@@ -14,14 +14,25 @@ local eventSchedulerCalendar
 local eventSchedulerCalendarYearIndex
 local eventSchedulerCalendarMonth
 
+local json = require("dkjson")
 local boostedWindow
-local creature_boosted
-local boss_boosted
+local api = "https://wiki.rookgaard.pl/api/"
+local config = {
+    api = {
+        motd = function () return api .. 'bonus/monster' end,
+        monster = function (name) return api .. 'monster/' .. name .. '/fixera' end,
+    }
+}
+local database = {
+    monsterOfTheDay = nil
+}
 
 local default_info = {
     [1] = {image = "images/randomhint", Title = "Random Hint", creature1="images/boost_monster1",creature2= "images/boost_monster2",description = "The customisable status bar includes big health and mana bars and can be placed on the bottom, the top or on the side of your game windows\n\n -\t\t https://github.com/mehah/otclient/wiki "},
   --  [2] = {image = "image of label", Title = "title", creature1="images of creature",creature2= "images of boos",description = "text in label see tutorial :  https://github.com/mehah/otclient/wiki"},
 }
+
+
 function init()
     g_ui.importStyle('calendar')
     bottomMenu = g_ui.displayUI('bottommenu')
@@ -40,10 +51,7 @@ function init()
     upcomingScheduleEvent:recursiveGetChildById('fill'):setOn(false)
     eventSchedulerCalendarYearIndex = 1
     eventSchedulerCalendarMonth = tonumber(os.date("%m"))
-
-    boostedWindow = bottomMenu:recursiveGetChildById('boostedWindow')
-    creature_boosted = boostedWindow:recursiveGetChildById('creature')
-    boss_boosted = boostedWindow:recursiveGetChildById('boss')
+    motd()
 
 --  if not Services.status and default_info then
     if default_info then
@@ -57,16 +65,6 @@ function init()
         showOffWindow.title:setText(tr(randomItem.Title))
         image:setImageSource(randomItem.image)
         description:setText(tr(randomItem.description))
-        creature_boosted:setVisible(false)
-        boss_boosted:setVisible(false)
-
-        local creature2 = boostedWindow:recursiveGetChildById('creature2')
-        local boss2 = boostedWindow:recursiveGetChildById('boss2')
-
-        creature2:setImageSource(randomItem.creature1)    
-        creature2:setVisible(true) 
-        boss2:setImageSource(randomItem.creature2)
-        boss2:setVisible(true)
     end
     if g_game.isOnline() then
         hide()
@@ -496,17 +494,42 @@ function onClickOnNextCalendar()
     reloadEventsSchedulerCurrentPage()
 end
 
-function Booster_creature(data)
-    if modules.game_things.isLoaded() then
-        local creatureraceid = modules.game_cyclopedia.RACE[data.creatureraceid]
-        local bossraceid = modules.game_cyclopedia.RACE_Bosstiary[data.bossraceid]
-        if creatureraceid then
-            creature_boosted:setOutfit({type=creatureraceid.type})
-            creature_boosted:getCreature():setStaticWalking(1000)
+function motd()
+    local function parseMonsterData(response)
+        if not response then
+            return
         end
-        if bossraceid then
-            boss_boosted:setOutfit({type=bossraceid.type})
-            boss_boosted:getCreature():setStaticWalking(1000)
+
+        local jsonStart = response:find("{")
+        if not jsonStart then
+            return
         end
+
+        local jsonResponse = response:sub(jsonStart)
+
+        local decoded, pos, err = json.decode(jsonResponse, 1, nil)
+        if err then
+            return
+        end
+
+    if type(decoded) == "table" and decoded.look then
+        database.monsterOfTheDay = decoded
+        bottomMenu:recursiveGetChildById('boostLook'):setOutfit(database.monsterOfTheDay.look)
+        bottomMenu:recursiveGetChildById('boostLook'):getCreature():setStaticWalking(1000)
     end
+end
+
+    local function parseMonsterName(response)
+        if not response then
+            return
+        end
+        
+        database.monsterOfTheDay = {
+            name = response:gsub('"', "")
+        }
+        bottomMenu:recursiveGetChildById('boostName'):setText(database.monsterOfTheDay.name)
+        HTTP.get(config.api.monster(database.monsterOfTheDay.name), parseMonsterData)
+    end
+
+    HTTP.get(config.api.motd(), parseMonsterName)
 end

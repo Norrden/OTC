@@ -28,19 +28,6 @@ Panel
   anchors.bottom: parent.bottom
   anchors.horizontalCenter: parent.horizontalCenter
   image-source: /images/ui/panel_top
-  
-  UIWidget
-    phantom: true
-    anchors.bottom: parent.bottom
-    anchors.horizontalCenter: parent.horizontalCenter
-    text-align: center
-    text-auto-resize: true
-    color: #e98d02
-    margin-bottom: 110
-    text: OTClient Redemption
-    font: verdana-11px-rounded
-    font-scale: 4
-    shader: Map - Party
 
   MiniQtScrollableWindow
     id: showOffWindow
@@ -134,7 +121,7 @@ Panel
     draggable: false
 
     Label
-      !text: tr('Boosted')
+      !text: tr('Monster Of The Day')
       font: verdana-11px-antialised
       text-offset: 0 2
       text-align: top
@@ -146,56 +133,23 @@ Panel
 
     Panel
       anchors.top: parent.top
-      anchors.left: parent.left
-      margin-left: 12
+      anchors.horizontalCenter: parent.horizontalCenter
       margin-top: 30
       size: 64 64
 
-      Creature
-        id: creature
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        image-source: ""
-        image-border: 0
-        border-width: 0
-        border-color: alpha
-
-      UIWidget
-        id: creature2
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        visible: false
+      UICreature
+        id: boostLook
+        anchors.centerIn: parent
+        size: 64 64
+        margin-right: 16
+        margin-bottom: 10
+        outfit-shader: outfit_default
 
     Label
-      !text: tr('Creature')
-      anchors.horizontalCenter: prev.horizontalCenter
+      id: boostName
+      anchors.horizontalCenter: parent.horizontalCenter
       anchors.top: prev.bottom
       margin-top: 3
-
-    Panel
-      anchors.top: parent.top
-      anchors.right: parent.right
-      margin-right: 12
-      margin-top: 30
-      size: 64 64
-
-      Creature
-        id: boss
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        image-source: ""
-        image-border: 0
-        border-width: 0
-        border-color: alpha
-        
-      UIWidget
-        id: boss2
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        visible: false
-
-    Label
-      !text: tr('Boss')
-      anchors.horizontalCenter: prev.horizontalCenter
-      anchors.top: prev.bottom
-      margin-top: 3
+      font: verdana-11px-rounded
+      color: #fc5203
+      horizontalAlignment: Text.AlignHCenter
