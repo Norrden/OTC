@@ -1,0 +1,8 @@
+Module
+  name: client_bottommenu
+  description: Bottom menu & Calendar
+  author: pw1602 (Tugaon), Norrden, marcosvf132
+  scripts: [ bottommenu ]
+  sandboxed: true
+  @onLoad: init()
+  @onUnload: terminate()
