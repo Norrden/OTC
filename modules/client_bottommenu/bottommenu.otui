@@ -39,7 +39,7 @@ Panel
 
     Label
       id: showOffWindowText
-      !text: tr('Random Hit')
+      !text: tr('Random Hint')
       font: verdana-11px-antialised
       text-offset: 0 2
       text-align: top
@@ -59,7 +59,7 @@ Panel
     draggable: false
 
     Label
-      !text: tr('Event Schedule')
+      !text: tr('Events')
       font: verdana-11px-antialised
       text-offset: 0 2
       text-align: top
@@ -90,11 +90,12 @@ Panel
         anchors.right: parent.horizontalCenter
 
       CalendarDay
-        id: activeScheduleEvent
+        id: activeEvent
         anchors.top: prev.bottom
         anchors.left: prev.left
         anchors.right: prev.right
         anchors.bottom: parent.bottom
+        @onClick: onClickOnCalendar()
 
       CalendarTopMark
         !text: tr('Upcoming')
@@ -104,7 +105,7 @@ Panel
         margin-left: 1  
 
       CalendarDay
-        id: upcomingScheduleEvent
+        id: upcomingEvent
         anchors.top: prev.bottom
         anchors.right: prev.right
         anchors.left: prev.left
@@ -141,8 +142,7 @@ Panel
         id: boostLook
         anchors.centerIn: parent
         size: 64 64
-        margin-right: 16
-        margin-bottom: 10
+        margin-bottom: 3
         outfit-shader: outfit_default
 
     Label

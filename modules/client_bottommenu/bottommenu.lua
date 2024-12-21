@@ -1,59 +1,39 @@
 local bottomMenu
-local calendarWindow
-local activeScheduleEvent
-local upcomingScheduleEvent
-local eventSchedulerYears
-local calendarCurrentMonth
-local calendarPrevButton
-local calendarNextButton
-local calendarCurrentDate
+local window = nil
+local calendarEvents = {}
 local showOffWindow
-
-local eventSchedulerTimestamp
-local eventSchedulerCalendar
-local eventSchedulerCalendarYearIndex
-local eventSchedulerCalendarMonth
-
+local selectedDate = os.date("*t")
+local currentDate = os.date("*t")
 local json = require("dkjson")
 local boostedWindow
 local api = "https://wiki.rookgaard.pl/api/"
 local config = {
+    monsterOfTheDay = nil,
+    fetchCalendar = true,
+    visibleMonths = 3,
     api = {
+        calendar = function() return api .. 'calendar' end,
         motd = function () return api .. 'bonus/monster' end,
         monster = function (name) return api .. 'monster/' .. name .. '/fixera' end,
     }
 }
-local database = {
-    monsterOfTheDay = nil
-}
 
 local default_info = {
-    [1] = {image = "images/randomhint", Title = "Random Hint", creature1="images/boost_monster1",creature2= "images/boost_monster2",description = "The customisable status bar includes big health and mana bars and can be placed on the bottom, the top or on the side of your game windows\n\n -\t\t https://github.com/mehah/otclient/wiki "},
-  --  [2] = {image = "image of label", Title = "title", creature1="images of creature",creature2= "images of boos",description = "text in label see tutorial :  https://github.com/mehah/otclient/wiki"},
+    [1] = {image = "images/randomhint", Title = "News",description = "Example News"},
 }
 
-
 function init()
-    g_ui.importStyle('calendar')
     bottomMenu = g_ui.displayUI('bottommenu')
-
-    calendarWindow = g_ui.createWidget('CalendarGrid', rootWidget)
-    calendarCurrentMonth = calendarWindow:recursiveGetChildById('calendarCurrentMonth')
-    calendarCurrentDate = calendarWindow:recursiveGetChildById('calendarCurrentDate')
-    calendarPrevButton = calendarWindow:recursiveGetChildById('calendarPrevButton')
-    calendarNextButton = calendarWindow:recursiveGetChildById('calendarNextButton')
-    calendarWindow:hide()
-
+    window = g_ui.displayUI("calendar")
+    window:setVisible(false)
+    connect(g_game, {
+        onGameStart = onGameStart,
+        onGameEnd = onGameEnd
+    })
     showOffWindow = bottomMenu:recursiveGetChildById('showOffWindow')
     showOffWindow.title = showOffWindow:recursiveGetChildById('showOffWindowText')
-    activeScheduleEvent = bottomMenu:recursiveGetChildById('activeScheduleEvent')
-    upcomingScheduleEvent = bottomMenu:recursiveGetChildById('upcomingScheduleEvent')
-    upcomingScheduleEvent:recursiveGetChildById('fill'):setOn(false)
-    eventSchedulerCalendarYearIndex = 1
-    eventSchedulerCalendarMonth = tonumber(os.date("%m"))
     motd()
 
---  if not Services.status and default_info then
     if default_info then
         local widget = g_ui.createWidget('ShowOffWidget', showOffWindow)
         local description = widget:recursiveGetChildById('description')
@@ -73,16 +53,12 @@ end
 
 function terminate()
     bottomMenu:destroy()
-    calendarWindow:destroy()
+    window:destroy()
 end
 
 function hide()
     bottomMenu:hide()
     bottomMenu:lower()
-
-    if not calendarWindow:isHidden() then
-        onClickCloseCalendar()
-    end
 end
 
 function show()
@@ -91,8 +67,7 @@ function show()
     bottomMenu:focus()
 end
 
--- @ Store showoff
-function setShowOffData(data)
+function setShowOffData(data) -- @ Store showoff
     local widget = g_ui.createWidget('ShowOffWidget', showOffWindow)
     local image = widget:recursiveGetChildById('image')
 
@@ -114,384 +89,31 @@ function setShowOffData(data)
     description:setText(tr(data.description))
 end
 
--- @ Calendar/Events scheduler
-function onClickOnCalendar()
-    if eventSchedulerYears == nil or #eventSchedulerYears == 0 then
-        return
+function onClickOnCalendar() -- @ Calendar/Events scheduler
+    if (type(calendarEvents) ~= "table") then
+        calendarEvents = {}
     end
 
-    calendarWindow:show()
-    calendarWindow:raise()
-    calendarWindow:centerIn('parent')
-    calendarWindow:removeAnchor(AnchorHorizontalCenter)
-    calendarWindow:removeAnchor(AnchorVerticalCenter)
-    reloadEventsSchedulerCurrentPage()
+    if (table.size(calendarEvents) == 0 and config.fetchCalendar) then
+        local calendarUrl = config.api.calendar()
+        HTTP.getJSON(calendarUrl, parseResponse)
+    else
+        buildMonth(0)
+    end
 
+    window:show()
+    window:raise()
+    window:centerIn('parent')
+    window:removeAnchor(AnchorHorizontalCenter)
+    window:removeAnchor(AnchorVerticalCenter)
     g_keyboard.bindKeyPress('Escape', onClickCloseCalendar)
 end
 
 function onClickCloseCalendar()
-    calendarWindow:hide()
-    calendarWindow:lower()
+    window:hide()
+    window:lower()
 
     g_keyboard.unbindKeyPress('Escape', onClickCloseCalendar)
-end
-
-function setEventsSchedulerTimestamp(time)
-    eventSchedulerTimestamp = time
-    calendarCurrentDate:setText(os.date("%Y-%m-%d, %H:%M CET", eventSchedulerTimestamp))
-end
-
-function getCalendarEventWidgetByDay(day, month, year, weekOffset, forceLine)
-    local weekIndex = getDayOfWeek(day, month, year)
-    local row = calendarWindow:recursiveGetChildById('row' .. weekIndex)
-    if not row then
-        return nil
-    end
-
-    local lineIndex = nil
-    if forceLine ~= nil then
-        lineIndex = forceLine
-    else
-        lineIndex = (math.floor(((weekOffset + day) - 1) / 7))
-    end
-    local line = row:recursiveGetChildById('line' .. lineIndex)
-    if not line then
-        return nil
-    end
-
-    return line
-end
-
-function reloadEventsSchedulerCurrentPage()
-    local firstDayOffset = getDayOfWeek(1)
-    if firstDayOffset == 0 then
-        firstDayOffset = 7
-    end
-    local weekOffset = firstDayOffset - 1
-
-    -- Days before the day 1 of this month
-    if weekOffset > 0 then
-        local previousYearIndex = eventSchedulerCalendarYearIndex
-        local previousMonth = eventSchedulerCalendarMonth
-        if previousMonth == 1 then
-            previousYearIndex = previousYearIndex - 1
-            previousMonth = 12
-        else
-            previousMonth = previousMonth - 1
-        end
-        if previousYearIndex >= 0 then
-            local previousDays = eventSchedulerYears[previousYearIndex][previousMonth]
-            local amountsLeft = weekOffset
-            local i = #previousDays
-            while (amountsLeft > 0) do
-                local widget = getCalendarEventWidgetByDay(i, previousMonth, tonumber(os.date("%Y", os.time())) +
-                    (previousYearIndex - 1), weekOffset, 0)
-                if widget then
-                    widget:clearEvents()
-                    widget.dayOfTheWeek = i
-                    widget:recursiveGetChildById('dayAndSeason'):setOn(true)
-                    widget:recursiveGetChildById('day'):setText(i)
-                    widget:recursiveGetChildById('day'):setWidth(string.len(
-                        widget:recursiveGetChildById('day'):getText()) * 10)
-                    widget:recursiveGetChildById('fill'):setOn(false)
-                    for _, event in ipairs(previousDays[i]) do
-                        widget:addScheduleEvent(event, false, nil)
-                    end
-                end
-                amountsLeft = amountsLeft - 1
-                i = i - 1
-            end
-        end
-    end
-
-    -- Days after the last day of this month
-    local days = eventSchedulerYears[eventSchedulerCalendarYearIndex][eventSchedulerCalendarMonth]
-    local lastDayOffset = getDayOfWeek(#days)
-    if lastDayOffset == 0 then
-        lastDayOffset = 7
-    end
-    local nextWeekOffset = 7 - lastDayOffset
-    local nextYearIndex = eventSchedulerCalendarYearIndex
-    local nextMonth = eventSchedulerCalendarMonth
-    if nextMonth == 12 then
-        nextYearIndex = nextYearIndex + 1
-        nextMonth = 1
-    else
-        nextMonth = nextMonth + 1
-    end
-    if nextYearIndex <= 2 then
-        local nextDays = eventSchedulerYears[nextYearIndex][nextMonth]
-        local amountsLeft = nextWeekOffset
-        local i = 1
-        local forceLine = 4
-        if firstDayOffset >= 5 then
-            forceLine = 5
-        end
-        if firstDayOffset <= 5 then
-            amountsLeft = amountsLeft + 7
-        end
-        while (amountsLeft > 0) do
-            if forceLine == 4 and amountsLeft == 7 then
-                forceLine = 5
-            end
-            local widget = getCalendarEventWidgetByDay(i, nextMonth,
-                tonumber(os.date("%Y", os.time())) + (nextYearIndex - 1), nextWeekOffset, forceLine)
-            if widget then
-                widget:clearEvents()
-                widget.dayOfTheWeek = i
-                widget:recursiveGetChildById('dayAndSeason'):setOn(true)
-                widget:recursiveGetChildById('day'):setText(i)
-                widget:recursiveGetChildById('day'):setWidth(
-                    string.len(widget:recursiveGetChildById('day'):getText()) * 10)
-                widget:recursiveGetChildById('fill'):setOn(false)
-                for _, event in ipairs(nextDays[i]) do
-                    widget:addScheduleEvent(event, false, nil)
-                end
-            end
-            amountsLeft = amountsLeft - 1
-            i = i + 1
-        end
-    end
-
-    for day, events in ipairs(days) do
-        local widget = getCalendarEventWidgetByDay(day, nil, nil, weekOffset, nil)
-        if widget then
-            widget:clearEvents()
-            widget.dayOfTheWeek = day
-            widget:recursiveGetChildById('dayAndSeason'):setOn(true)
-            widget:recursiveGetChildById('day'):setText(tr(day))
-            widget:recursiveGetChildById('day'):setWidth(string.len(widget:recursiveGetChildById('day'):getText()) * 10)
-            widget:recursiveGetChildById('fill'):setOn(true)
-            for _, event in ipairs(events) do
-                widget:addScheduleEvent(event, true, nil)
-            end
-        end
-    end
-
-    calendarCurrentMonth:setText(os.date("%B", os.time {
-        year = 2023,
-        month = eventSchedulerCalendarMonth,
-        day = 1
-    }) .. " " .. (tonumber(os.date("%Y", os.time())) + (eventSchedulerCalendarYearIndex - 1)))
-end
-
-function reloadEventsSchedulerCalender()
-    eventSchedulerYears = {}
-    table.insert(eventSchedulerYears, createCalendar(tonumber(os.date("%Y", os.time()))))
-    table.insert(eventSchedulerYears, createCalendar(tonumber(os.date("%Y", os.time())) + 1))
-
-    if eventSchedulerCalendar == nil or #eventSchedulerCalendar == 0 then
-        return
-    end
-
-    for _, info in ipairs(eventSchedulerCalendar) do
-        local days = getCalendarDays(info.startdate, info.enddate)
-        for index, day in ipairs(days) do
-            table.insert(day, {
-                active = (info.colorlight .. "ff"),
-                inactive = (info.colordark .. "ff"),
-                description = info.description,
-                priority = info.displaypriority,
-                season = info.isseasonal,
-                name = info.name,
-                special = info.specialevent,
-                firstDay = index == 1,
-                lastDay = index == #days
-            })
-        end
-    end
-
-    activeScheduleEvent:clearEvents()
-    local currentDay = getCalendarDays(os.time(), os.time())
-    if #currentDay > 0 then
-        for _, event in ipairs(currentDay[1]) do
-            activeScheduleEvent:addScheduleEvent(event, true, onClickOnCalendar)
-        end
-    end
-
-    upcomingScheduleEvent:clearEvents()
-    local nextDay = getCalendarDays(os.time() + 86400, os.time() + 86400)
-    if #nextDay > 0 then
-        for _, event in ipairs(nextDay[1]) do
-            upcomingScheduleEvent:addScheduleEvent(event, false, onClickOnCalendar)
-        end
-    end
-end
-
-function setEventsSchedulerCalender(calender)
-    eventSchedulerCalendar = calender
-    reloadEventsSchedulerCalender()
-end
-
-function createCalendar(year)
-    local calendar = {}
-
-    for month = 1, 12 do
-        calendar[month] = {}
-        local daysInMonth = 31
-        if month == 2 then
-            if (year % 4 == 0 and year % 100 ~= 0) or (year % 400 == 0) then
-                daysInMonth = 29
-            else
-                daysInMonth = 28
-            end
-        elseif month == 4 or month == 6 or month == 9 or month == 11 then
-            daysInMonth = 30
-        end
-
-        for day = 1, daysInMonth do
-            calendar[month][day] = {}
-        end
-    end
-
-    return calendar
-end
-
-function getCalendarDays(startTimestamp, endTimestamp)
-    local currentYear = tonumber(os.date("%Y", os.time()))
-    local startYear = tonumber(os.date("%Y", startTimestamp))
-    local endYear = tonumber(os.date("%Y", endTimestamp))
-    local daysInRange = {}
-
-    if startYear ~= currentYear and startYear ~= (currentYear + 1) then
-        return daysInRange
-    end
-
-    if endYear ~= currentYear and endYear ~= (currentYear + 1) then
-        return daysInRange
-    end
-
-    local startMonth = tonumber(os.date("%m", startTimestamp))
-    local startDay = tonumber(os.date("%d", startTimestamp))
-    local endMonth = tonumber(os.date("%m", endTimestamp))
-    local endDay = tonumber(os.date("%d", endTimestamp))
-
-    if startYear == currentYear then
-        for month = startMonth, endMonth do
-            local startLoop = 1
-            local endLoop = 31
-
-            if month == startMonth then
-                startLoop = startDay
-            end
-
-            if month == endMonth then
-                endLoop = endDay
-            end
-
-            if eventSchedulerYears[1][month] then
-                for day = startLoop, endLoop do
-                    if eventSchedulerYears[1][month][day] then
-                        table.insert(daysInRange, eventSchedulerYears[1][month][day])
-                    end
-                end
-            end
-        end
-    else
-        for month = startMonth, 12 do
-            local startLoop = 1
-            local endLoop = 31
-
-            if month == startMonth then
-                startLoop = startDay
-            end
-
-            if month == endMonth then
-                endLoop = endDay
-            end
-
-            if eventSchedulerYears[1][month] then
-                for day = startLoop, endLoop do
-                    if eventSchedulerYears[1][month][day] then
-                        table.insert(daysInRange, eventSchedulerYears[1][month][day])
-                    end
-                end
-            end
-        end
-        for month = 1, endMonth do
-            local startLoop = 1
-            local endLoop = 31
-
-            if month == startMonth then
-                startLoop = startDay
-            end
-
-            if month == endMonth then
-                endLoop = endDay
-            end
-
-            if eventSchedulerYears[2][month] then
-                for day = startLoop, endLoop do
-                    if eventSchedulerYears[2][month][day] then
-                        table.insert(daysInRange, eventSchedulerYears[2][month][day])
-                    end
-                end
-            end
-        end
-    end
-
-    return daysInRange
-end
-
-function getDayOfWeek(day, month, year)
-    if not year then
-        year = tonumber(os.date("%Y", os.time())) + (eventSchedulerCalendarYearIndex - 1)
-    end
-    if not month then
-        month = eventSchedulerCalendarMonth
-    end
-    local timestamp = os.time {
-        year = year,
-        month = month,
-        day = day
-    }
-    local weekday = tonumber(os.date("%w", timestamp))
-    -- 0: Sunday
-    -- 6: Saturday
-    return weekday
-end
-
-function onClickOnPreviousCalendar()
-    if eventSchedulerCalendarMonth == 1 then
-        if eventSchedulerCalendarYearIndex == 1 then
-            return
-        end
-        eventSchedulerCalendarMonth = 12
-        eventSchedulerCalendarYearIndex = eventSchedulerCalendarYearIndex - 1
-    else
-        eventSchedulerCalendarMonth = eventSchedulerCalendarMonth - 1
-    end
-
-    calendarNextButton:setEnabled(true)
-    if eventSchedulerCalendarYearIndex == 1 and eventSchedulerCalendarMonth == (tonumber(os.date("%m", os.time())) - 1) then
-        calendarPrevButton:setEnabled(false)
-    else
-        calendarPrevButton:setEnabled(true)
-    end
-
-    reloadEventsSchedulerCurrentPage()
-end
-
-function onClickOnNextCalendar()
-    if eventSchedulerCalendarMonth == 12 then
-        if eventSchedulerCalendarYearIndex == 2 then
-            return
-        end
-        eventSchedulerCalendarMonth = 1
-        eventSchedulerCalendarYearIndex = eventSchedulerCalendarYearIndex + 1
-    else
-        eventSchedulerCalendarMonth = eventSchedulerCalendarMonth + 1
-    end
-
-    calendarPrevButton:setEnabled(true)
-    if eventSchedulerCalendarYearIndex == 2 and eventSchedulerCalendarMonth == (tonumber(os.date("%m", os.time())) - 1) then
-        calendarNextButton:setEnabled(false)
-    else
-        calendarNextButton:setEnabled(true)
-    end
-
-    reloadEventsSchedulerCurrentPage()
 end
 
 function motd()
@@ -513,8 +135,8 @@ function motd()
         end
 
     if type(decoded) == "table" and decoded.look then
-        database.monsterOfTheDay = decoded
-        bottomMenu:recursiveGetChildById('boostLook'):setOutfit(database.monsterOfTheDay.look)
+        config.monsterOfTheDay = decoded
+        bottomMenu:recursiveGetChildById('boostLook'):setOutfit(config.monsterOfTheDay.look)
         bottomMenu:recursiveGetChildById('boostLook'):getCreature():setStaticWalking(1000)
     end
 end
@@ -524,12 +146,215 @@ end
             return
         end
         
-        database.monsterOfTheDay = {
+        config.monsterOfTheDay = {
             name = response:gsub('"', "")
         }
-        bottomMenu:recursiveGetChildById('boostName'):setText(database.monsterOfTheDay.name)
-        HTTP.get(config.api.monster(database.monsterOfTheDay.name), parseMonsterData)
+        bottomMenu:recursiveGetChildById('boostName'):setText(config.monsterOfTheDay.name)
+        HTTP.get(config.api.monster(config.monsterOfTheDay.name), parseMonsterData)
+    end
+    HTTP.get(config.api.motd(), parseMonsterName)
+end
+
+local function checkCalendarDayIfExist(year, month, day)
+    if (not calendarEvents[year]) then
+        calendarEvents[year] = {}
     end
 
-    HTTP.get(config.api.motd(), parseMonsterName)
+    if (not calendarEvents[year][month]) then
+        calendarEvents[year][month] = {}
+    end
+
+    if (not calendarEvents[year][month][day]) then
+        calendarEvents[year][month][day] = {}
+    end
+end
+
+local function convertToTimestamp(date)
+    local pattern = "(%d+)-(%d+)-(%d+) (%d+):(%d+):(%d+)"
+    local runyear, runmonth, runday, runhour, runminute, runseconds = date:match(pattern)
+
+    if (tonumber(runyear) < currentDate.year) then
+        runyear = currentDate.year + tonumber(runyear)
+    end
+
+    return os.time({
+        year = runyear,
+        month = runmonth,
+        day = runday,
+        hour = runhour,
+        min = runminute,
+        sec = runseconds
+    })
+end
+
+function parseResponse(data)
+    if (not data or data == nil) then
+        return
+    end
+
+    for _, values in pairs(data) do
+        local fromDate = convertToTimestamp(values.fromDate)
+        local toDate = values.toDate and convertToTimestamp(values.toDate) or fromDate
+        for v = fromDate, toDate, 24 * 60 * 60 do
+            local date = os.date('*t', v)
+            checkCalendarDayIfExist(date.year, date.month, date.day)
+            table.insert(
+                calendarEvents[date.year][date.month][date.day],
+                {
+                    name = values.name,
+                    color = values.color
+                }
+            )
+        end
+    end
+
+    buildMonth(0)
+end
+
+local function getMonthDays(year, month)
+    local dateTable = { year = year, month = month + 1, day = 1, hour = 0 }
+    local monthInfo = os.date("*t", os.time(dateTable))
+    monthInfo.day = monthInfo.day - 1
+    return os.date("*t", os.time(monthInfo))
+end
+
+local function createEvent(day, name, color, isOld)
+    local event = g_ui.createWidget('CalendarEvent', day)
+    event:setId(day.calendarDayName:getText() .. '-' .. name)
+    event.calendarEventName:setText(name)
+    if (color) then
+        event:setImageColor(color)
+    end
+    if (isOld and day:getOpacity() == 1) then
+        event:setOpacity(0.5)
+    end
+end
+
+local function getTimestamp(year, month, day)
+    return os.time({ year = year, month = month, day = day })
+end
+
+local function addEventForDay(dayUI, year, month, day)
+    if (calendarEvents[year]) then
+        if (calendarEvents[year][month]) then
+            local eventData = calendarEvents[year][month][day]
+            if (eventData) then
+                for _, data in pairs(eventData) do
+                    local timestamp = getTimestamp(year, month, day)
+                    local current = getTimestamp(currentDate.year, currentDate.month, currentDate.day)
+                    createEvent(dayUI, data.name, data.color, timestamp < current)
+                end
+            end
+        end
+    end
+end
+
+function buildMonth(value)
+
+    if (value ~= 0) then
+        selectedDate.month = selectedDate.month + value
+    else
+        selectedDate = os.date('*t')
+    end
+
+    if (selectedDate.month < 1) then
+        selectedDate.year = selectedDate.year - 1
+        selectedDate.month = 12
+    end
+
+    if (selectedDate.month > 12) then
+        selectedDate.year = selectedDate.year + 1
+        selectedDate.month = 1
+    end
+
+    window.selectionList:destroyChildren()
+
+    local previousMonth = getMonthDays(selectedDate.year, selectedDate.month - 1)
+    local previousMonthName = os.date("%b", os.time(previousMonth))
+    local isMonday = false
+    for i = previousMonth.day - 6, previousMonth.day do
+        local day = os.time({
+            year = previousMonth.year, month = previousMonth.month, day = i
+        })
+        if (tonumber(os.date('%w', day)) == 1) then
+            isMonday = true
+        end
+
+        if (isMonday) then
+            local day = g_ui.createWidget("CalendarDay", window.selectionList)
+            day:setId('prev' .. i)
+            day.calendarDayName:setText(i .. ' ' .. previousMonthName .. (previousMonth.year ~= currentDate.year and ' ' .. previousMonth.year or ''))
+            day:setOpacity(0.5)
+
+            addEventForDay(day, previousMonth.year, previousMonth.month, i)
+        end
+    end
+    if (previousMonth.year == currentDate.year and previousMonth.month < currentDate.month) then
+        window.previousMonth:disable()
+        window.previousMonth.previousMonthLabel:setImageClip(torect("0 0 12 21"))
+    else
+        window.previousMonth:enable()
+        window.previousMonth.previousMonthLabel:setImageClip(torect("0 42 12 21"))
+    end
+
+    local currentMonth = getMonthDays(selectedDate.year, selectedDate.month)
+    local currentMonthName = os.date("%b", os.time(currentMonth))
+    local lastDayOfWeek = 0
+    for i = 1, currentMonth.day do
+        local day = g_ui.createWidget("CalendarDay", window.selectionList)
+        day:setId(i)
+        day.calendarDayName:setText(i .. ' ' .. currentMonthName .. (currentMonth.year ~= currentDate.year and ' ' .. currentMonth.year or ''))
+        if (i == currentDate.day and currentMonth.month == currentDate.month and currentMonth.year == currentDate.year) then
+            day.calendarDayNameContainer:setImageColor('#ff4444')
+            day:setBorderColor('#810000')
+        end
+
+        addEventForDay(day, currentMonth.year, currentMonth.month, i)
+
+        if (i == currentMonth.day) then
+            lastDayOfWeek = tonumber(os.date('%w', os.time(currentMonth)))
+        end
+    end
+
+    local nextMonth = getMonthDays(selectedDate.year, selectedDate.month + 1)
+    local nextMonthName = os.date("%b", os.time(nextMonth))
+    for i = 1, (7 - lastDayOfWeek) do
+        local day = g_ui.createWidget("CalendarDay", window.selectionList)
+        day:setId('next' .. i)
+        day.calendarDayName:setText(i .. ' ' .. nextMonthName .. (nextMonth.year ~= currentDate.year and ' ' .. nextMonth.year or ''))
+        day:setOpacity(0.5)
+        addEventForDay(day, nextMonth.year, nextMonth.month, i)
+    end
+
+    local maxVisible = os.time(
+        os.date(
+        '*t',
+        os.time({
+            year = currentDate.year,
+            month = currentDate.month + config.visibleMonths + 1,
+            day = 1
+        }))
+    )
+    if (os.time(nextMonth) >= maxVisible) then
+        window.nextMonth:disable()
+        window.nextMonth.nextMonthLabel:setImageClip(torect("12 0 12 21"))
+    else
+        window.nextMonth:enable()
+        window.nextMonth.nextMonthLabel:setImageClip(torect("12 42 12 21"))
+    end
+end
+
+local function addBottomWindow(dayUI, year, month, day)
+    if (calendarEvents[year]) then
+        if (calendarEvents[year][month]) then
+            local eventData = calendarEvents[year][month][day]
+            if (eventData) then
+                for _, data in pairs(eventData) do
+                    local timestamp = getTimestamp(year, month, day)
+                    local current = getTimestamp(currentDate.year, currentDate.month, currentDate.day)
+                    createEvent(dayUI, data.name, data.color, timestamp < current)
+                end
+            end
+        end
+    end
 end
