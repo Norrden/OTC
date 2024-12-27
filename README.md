@@ -9,7 +9,7 @@
 
 
 
-## 📋 Table of Contents
+## 📋 Spis treści
 
 1. ![Logo](https://raw.githubusercontent.com/mehah/otclient/main/src/otcicon.ico)  [Czym jest OTClient - Redemption?](#whatisotclient)
 2. 🚀 [Funkcje](#features)
