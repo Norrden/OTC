@@ -23,8 +23,7 @@
 9. ©️  [Licencja](#license)
 10. ❤️ [Współtwórcy](#contributors)
 
-## <a name="whatisotclient">![Logo](https://raw.githubusercontent.com/mehah/otclient/main/src/otcicon.ico)  [Czym jest OTClient - Redemption?](https://stackedit.io/app#whatisotclient)</a>
-
+## <a name="whatisotclient">![Logo](https://raw.githubusercontent.com/mehah/otclient/main/src/otcicon.ico)  Czym jest OTClient?</a>
 
 OTClient - Redemption to alternatywny klient gry Tibia, przeznaczony do użytku z serwerami OT. Jego celem jest zapewnienie pełnej funkcjonalności i elastyczności, dlatego wykorzystuje skrypty .lua do obsługi wszystkich funkcji interfejsu gry oraz pliki konfiguracyjne .otui - podobne do .css celem projektowania interfejsu klienta. OTClient - Redemption działa w oparciu o system modułowy, co oznacza, że każda funkcjonalność jest oddzielnym modułem, co daje użytkownikom możliwość łatwej modyfikacji i dostosowywania wszystkich jego elementów. Użytkownicy mogą również tworzyć nowe mody oraz moduły i rozszerzać interfejs gry według własnych potrzeb. OTClient jest napisany w C++20 i intensywnie skryptowany w LUA.
 
@@ -41,14 +40,15 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
 - <details>
   <summary>Szczegóły optymalizacji w odniesieniu do OTClient autorstwa edubart:</summary>
 
+
   - C++20 (v17, budowa Unity i tryb manifestu (vcpkg.json)) w wersji x32 i x64
 
   - <details>
     <summary>Asynchroniczne ładowanie tekstur</summary>
 
--  **i )  Opis**: Dzięki temu plik .spr nie jest buforowany, a w konsekwencji zużycie pamięci RAM jest mniejsze.
+      - **i ) Opis:** Dzięki temu plik .spr nie jest buforowany, a w konsekwencji zużycie pamięci RAM jest mniejsze.
 
--  **ii )  Przykład:**
+      - **ii ) Przykład:**
 
 
       https://github.com/kokekanon/otclient.readme/assets/114332266/f3b7916a-d6ed-46f5-b516-30421de4616d
@@ -59,14 +59,14 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
   - <details>
     <summary>Wielowątkowość</summary>
 
-      -**i ) Opis**:
+      -**i ) Opis:**
 
     [Główny Wątek]
-- Dźwięk
-- Cząsteczki
-- Ładowanie tekstur (plików)
-- Obsługa okien (klawiatura, mysz, ...)
-- Generowanie tekstur
+    - Dźwięk
+    - Cząsteczki
+    - Ładowanie tekstur (plików)
+    - Obsługa okien (klawiatura, mysz, ...)
+    - Generowanie tekstur
 
     [Drugi Wątek]
     - Połączenie
@@ -85,7 +85,7 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
   - <details>
     <summary>Mniejsze zużycie pamięci</summary>
 
-      - **i ) Opis**: 
+      - **i ) Opis:**
         ```async autoreload
         highlightingPtr to stackPos
         new async dispatcher (using bs thread_pool)
@@ -102,7 +102,7 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
   - <details>
     <summary>-   Nowy system oświetlenia z przyciemnianiem</summary>
 
-      - **i ) Przykład**
+      - **i ) Przykład:**
 
 
       https://github.com/kokekanon/otclient.readme/assets/114332266/de8ffd14-af8c-4cc0-b5b1-2e166243bffc
@@ -113,19 +113,20 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
   - Ulepszenie systemu chodzenia
 
 
-  - -   Obsługuje sekwencyjne pakiety i kompresję
+  -   Obsługuje sekwencyjne pakiety i kompresję
 
   - Wsparcie (Tibia 13)
 
   - <details>
     <summary>Ulepszenie UIWidgets</summary>
 
-      - **i ) Opis:**<br><br>[UIWidget] Ulepszony algorytm interfejsu użytkownika przyniósł lepszą wydajność w dodawaniu, usuwaniu i przestawianiu widgetów. Można zauważyć te poprawki w module walki.<br><br>
+      - **i ) Opis:**<br><br>
+      [UIWidget] Ulepszony algorytm interfejsu użytkownika przyniósł lepszą wydajność w dodawaniu, usuwaniu i przestawianiu widgetów. Można zauważyć te poprawki w module walki.<br><br>
    
 
 
 
-      - **ii ) Przykład**
+      - **ii ) Przykład:**
 
 
       https://github.com/kokekanon/otclient.readme/assets/114332266/eed1464a-ae4d-4cd6-9f22-c719b4f09766
@@ -135,7 +136,7 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
   - <details>
     <summary>Wymuszona optymalizacja efektów</summary>
 
-      - **i ) Opis :** Unika generowania efektów w określonych sytuacjach.
+      - **i ) Opis:** Unika generowania efektów w określonych sytuacjach.
 
     </details>
     
@@ -341,11 +342,11 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
    <summary>Wsparcie dla kodów QR, z automatycznym generowaniem z ciągu znaków.</summary>
 
   - autorstwa [@conde2](https://github.com/conde2)
- ```
- UIQrCode: 
-code-border: 2
-code: Hail OTClient Redemption - Conde2 Dev
-```
+  ```
+  UIQrCode: 
+  code-border: 2
+  code: Hail OTClient Redemption - Conde2 Dev
+  ```
 
 </details>
   
@@ -454,7 +455,7 @@ code: Hail OTClient Redemption - Conde2 Dev
 ##### 💸 Wsparcie  (Funkcje)
 - Bot V8  ([@luanluciano93](https://github.com/luanluciano93), [@SkullzOTS](https://github.com/SkullzOTS), [@kokekanon](https://github.com/kokekanon), [@FranciskoKing](https://github.com/FranciskoKing), [@Kizuno18](https://github.com/Kizuno18))
   - Zaadoptowany w 85%
-  - TBy aktywować, należy usunąć flagę BOT_PROTECTION.
+  - By aktywować, należy usunąć flagę BOT_PROTECTION.
   - [VS Solution](https://github.com/mehah/otclient/blob/68e4e1b94c2041bd235441244156e6477058250c/vc17/settings.props#L9) / [CMAKE](https://github.com/mehah/otclient/blob/68e4e1b94c2041bd235441244156e6477058250c/src/CMakeLists.txt#L13)
 
 - Cieniowanie z boforem ramki  ([@SkullzOTS](https://github.com/SkullzOTS), [@Mryukiimaru](https://github.com/Mryukiimaru), [@JeanTheOne](https://github.com/JeanTheOne), [@KizaruHere](https://github.com/KizaruHere))
@@ -475,7 +476,7 @@ code: Hail OTClient Redemption - Conde2 Dev
 - UIGraph
 - Przypisywanie klawiszy
   
-## <a name="themobileproject"><img height="32" src="https://raw.githubusercontent.com/github/explore/80688e429a7d4ef2fca1e82350fe8e3517d3494d/topics/android/android.png" alt="Android"> Projekt klienta mobilnego</a>
+## <a name="themobileproject"><img height="32" src="https://raw.githubusercontent.com/github/explore/80688e429a7d4ef2fca1e82350fe8e3517d3494d/topics/android/android.png" alt="Android"> Klient mobilny</a>
 Projekt klienta mobilnego
 To jest fork OTClienta edubarta. Celem tego forka jest opracowanie działającego otclienta na urządzenia mobilne.
 
