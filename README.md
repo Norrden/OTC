@@ -299,7 +299,7 @@ Oprócz elastyczności w zakresie skryptów, OTClient - Redemption oferuje wiele
 
 | <img src="https://github.com/kokekanon/OTredemption-Picture-NODELETE/blob/main/Picture/Shader/001_creature.gif?raw=true" width="200" alt="Haskanoid Video" style="max-width:200px;"> | <img src="https://github.com/kokekanon/OTredemption-Picture-NODELETE/blob/main/Picture/Shader/003_map.gif?raw=true" width="200" alt="Peoplemon by Alex Stuart" style="max-width: 200px;"> | <img src="https://github.com/kokekanon/OTredemption-Picture-NODELETE/blob/main/Picture/Shader/002_mount.gif?raw=true" width="200" alt="Space Invaders" style="max-width: 200px;"> |
 |-------------------------------------------|---------------|-------------------------|
-| Stworzenia | Mapy | Wierzchowiec|
+| Stworzenia | Mapy | Wierzchowca|
 
 - Przebudowany moduł walki autorstwa [@andersonfaaria](https://github.com/andersonfaaria)
 
